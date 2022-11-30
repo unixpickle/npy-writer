@@ -8,6 +8,7 @@ readme = "README.md"
 license = "MIT OR Apache-2.0"
 version = "0.1.0"
 authors = ["Alex Nichol <unixpickle@gmail.com>"]
+exclude = [".vscode"]
 
 [dependencies]
 ndarray = { version = "0.15.0", optional = true }
