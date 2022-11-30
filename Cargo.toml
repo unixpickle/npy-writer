@@ -2,6 +2,10 @@
 edition = "2021"
 name = "npy-writer"
 description = "Export numpy arrays in the npy or npz format."
+homepage = "https://github.com/unixpickle/npy-writer"
+repository = "https://github.com/unixpickle/npy-writer"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
 version = "0.1.0"
 authors = ["Alex Nichol <unixpickle@gmail.com>"]
 
