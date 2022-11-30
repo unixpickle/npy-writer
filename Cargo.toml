@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-name = "npy_writer"
+name = "npy-writer"
 description = "Export numpy arrays in the npy or npz format."
 version = "0.1.0"
 authors = ["Alex Nichol <unixpickle@gmail.com>"]

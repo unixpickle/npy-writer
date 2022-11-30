@@ -4,7 +4,7 @@ pub trait NumpyArrayElement {
     const DATA_SIZE: usize;
     const DATA_FORMAT: &'static str;
 
-    fn encode<W: std::io::Write>(&self, out: &mut W) -> std::io::Result<()>;
+    fn encode_npy_element<W: std::io::Write>(&self, out: &mut W) -> std::io::Result<()>;
 }
 
 macro_rules! array_element {
@@ -13,7 +13,7 @@ macro_rules! array_element {
             const DATA_SIZE: usize = $data_size;
             const DATA_FORMAT: &'static str = $data_format;
 
-            fn encode<W: std::io::Write>(&self, out: &mut W) -> std::io::Result<()> {
+            fn encode_npy_element<W: std::io::Write>(&self, out: &mut W) -> std::io::Result<()> {
                 out.write_all(&self.to_le_bytes())
             }
         }
@@ -76,7 +76,7 @@ impl<A: NumpyArray> NumpyWritable for A {
             &self.npy_shape(),
         ))?;
         for elem in self.npy_elements() {
-            elem.encode(out)?;
+            elem.encode_npy_element(out)?;
         }
         Ok(())
     }
@@ -84,27 +84,56 @@ impl<A: NumpyArray> NumpyWritable for A {
 
 impl NumpyWritable for Vec<String> {
     fn write_npy<W: std::io::Write>(self, out: &mut W) -> std::io::Result<()> {
-        let unicode: Vec<Vec<u32>> = self
-            .into_iter()
-            .map(|x| x.chars().map(|x| x as u32).collect::<Vec<_>>())
-            .collect();
-        let max_result = unicode.iter().map(|x| x.len()).max();
-        if let Some(max_len) = max_result {
-            out.write_all(&encode_header(&format!("<U{}", max_len), &[unicode.len()]))?;
-            for ustr in unicode {
-                let mut byte_str = Vec::new();
-                for ch in &ustr {
-                    byte_str.extend(ch.to_le_bytes());
-                }
-                for _ in ustr.len()..max_len {
-                    byte_str.extend([0, 0, 0, 0]);
-                }
-                out.write_all(&byte_str)?;
+        write_strings_to_npy(self.iter(), out)
+    }
+}
+
+impl NumpyWritable for Vec<&str> {
+    fn write_npy<W: std::io::Write>(self, out: &mut W) -> std::io::Result<()> {
+        write_strings_to_npy(self.iter(), out)
+    }
+}
+
+impl NumpyWritable for &[String] {
+    fn write_npy<W: std::io::Write>(self, out: &mut W) -> std::io::Result<()> {
+        write_strings_to_npy(self.iter(), out)
+    }
+}
+
+impl NumpyWritable for &[&str] {
+    fn write_npy<W: std::io::Write>(self, out: &mut W) -> std::io::Result<()> {
+        write_strings_to_npy(self.iter(), out)
+    }
+}
+
+pub fn write_strings_to_npy<
+    'a,
+    S: 'a + AsRef<str>,
+    I: 'a + Iterator<Item = S>,
+    W: std::io::Write,
+>(
+    it: I,
+    out: &mut W,
+) -> std::io::Result<()> {
+    let unicode: Vec<Vec<u32>> = it
+        .map(|x| x.as_ref().chars().map(|x| x as u32).collect::<Vec<_>>())
+        .collect();
+    let max_result = unicode.iter().map(|x| x.len()).max();
+    if let Some(max_len) = max_result {
+        out.write_all(&encode_header(&format!("<U{}", max_len), &[unicode.len()]))?;
+        for ustr in unicode {
+            let mut byte_str = Vec::new();
+            for ch in &ustr {
+                byte_str.extend(ch.to_le_bytes());
             }
-            Ok(())
-        } else {
-            out.write_all(&encode_header("<U1", &[0]))
+            for _ in ustr.len()..max_len {
+                byte_str.extend([0, 0, 0, 0]);
+            }
+            out.write_all(&byte_str)?;
         }
+        Ok(())
+    } else {
+        out.write_all(&encode_header("<U1", &[0]))
     }
 }
 
@@ -134,4 +163,17 @@ fn encode_header(format: &str, shape: &[usize]) -> Vec<u8> {
     all_bytes.push(((header_bytes.len() >> 8) & 0xff) as u8);
     all_bytes.extend(header_bytes);
     all_bytes
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::NumpyWritable;
+
+    #[test]
+    fn test_encode_strings() {
+        let strs = vec!["hello", "test", "123", "longest"];
+        let mut buf = Vec::new();
+        strs.write_npy(&mut buf).unwrap();
+        assert_eq!(buf, include_bytes!("test_data/strings_test_out.npy"));
+    }
 }
