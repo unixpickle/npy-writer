@@ -1,0 +1,15 @@
+[package]
+edition = "2021"
+name = "npy_writer"
+description = "Export numpy arrays in the npy or npz format."
+version = "0.1.0"
+authors = ["Alex Nichol <unixpickle@gmail.com>"]
+
+[dependencies]
+ndarray = { version = "0.15.0", optional = true }
+zip = { version = "0.6.3", optional = true }
+
+[features]
+ndarray = ["dep:ndarray"]
+zip = ["dep:zip"]
+full = ["ndarray", "zip"]
