@@ -1,4 +1,4 @@
-use crate::NumpyWritable;
+use crate::NumpyWriter;
 use std::io::Write;
 use std::{fs::File, io::BufWriter, path::Path};
 use zip::result::ZipResult;
@@ -15,7 +15,7 @@ impl NpzWriter {
         Ok(NpzWriter { writer: zw })
     }
 
-    pub fn write<T: NumpyWritable>(&mut self, name: &str, t: T) -> std::io::Result<()> {
+    pub fn write<T: NumpyWriter>(&mut self, name: &str, t: T) -> std::io::Result<()> {
         let full_name = format!("{}.npy", name);
         self.writer.start_file(&full_name, FileOptions::default())?;
         let mut buffered = BufWriter::new(&mut self.writer);

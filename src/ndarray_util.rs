@@ -21,7 +21,7 @@ where
 mod tests {
     use ndarray::Array3;
 
-    use crate::NumpyWritable;
+    use crate::NumpyWriter;
 
     #[test]
     fn test_3d_array() {

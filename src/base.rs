@@ -65,11 +65,11 @@ impl<A: NumpyArrayElement> NumpyArray for Vec<A> {
     }
 }
 
-pub trait NumpyWritable: Sized {
+pub trait NumpyWriter: Sized {
     fn write_npy<W: std::io::Write>(self, out: &mut W) -> std::io::Result<()>;
 }
 
-impl<A: NumpyArray> NumpyWritable for A {
+impl<A: NumpyArray> NumpyWriter for A {
     fn write_npy<W: std::io::Write>(self, out: &mut W) -> std::io::Result<()> {
         out.write_all(&encode_header(
             <Self as NumpyArray>::Elem::DATA_FORMAT,
@@ -82,25 +82,25 @@ impl<A: NumpyArray> NumpyWritable for A {
     }
 }
 
-impl NumpyWritable for Vec<String> {
+impl NumpyWriter for Vec<String> {
     fn write_npy<W: std::io::Write>(self, out: &mut W) -> std::io::Result<()> {
         write_strings_to_npy(self.iter(), out)
     }
 }
 
-impl NumpyWritable for Vec<&str> {
+impl NumpyWriter for Vec<&str> {
     fn write_npy<W: std::io::Write>(self, out: &mut W) -> std::io::Result<()> {
         write_strings_to_npy(self.iter(), out)
     }
 }
 
-impl NumpyWritable for &[String] {
+impl NumpyWriter for &[String] {
     fn write_npy<W: std::io::Write>(self, out: &mut W) -> std::io::Result<()> {
         write_strings_to_npy(self.iter(), out)
     }
 }
 
-impl NumpyWritable for &[&str] {
+impl NumpyWriter for &[&str] {
     fn write_npy<W: std::io::Write>(self, out: &mut W) -> std::io::Result<()> {
         write_strings_to_npy(self.iter(), out)
     }
@@ -167,7 +167,7 @@ fn encode_header(format: &str, shape: &[usize]) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use crate::NumpyWritable;
+    use crate::NumpyWriter;
 
     #[test]
     fn test_encode_strings() {
