@@ -1,4 +1,4 @@
-use std::fmt::Write;
+use std::{fmt::Write, ops::Deref};
 
 pub trait NumpyArrayElement {
     const DATA_SIZE: usize;
@@ -82,15 +82,15 @@ impl<A: NumpyArray> NumpyWriter for A {
     }
 }
 
-impl NumpyWriter for Vec<String> {
+impl NumpyWriter for &str {
     fn write_npy<W: std::io::Write>(self, out: &mut W) -> std::io::Result<()> {
-        write_strings_to_npy(self.iter(), out)
-    }
-}
-
-impl NumpyWriter for Vec<&str> {
-    fn write_npy<W: std::io::Write>(self, out: &mut W) -> std::io::Result<()> {
-        write_strings_to_npy(self.iter(), out)
+        let chars = self.chars().map(|x| x as u32).collect::<Vec<_>>();
+        out.write_all(&encode_header(&format!("<U{}", chars.len()), &[]))?;
+        let mut byte_str = Vec::new();
+        for ch in chars {
+            byte_str.extend(ch.to_le_bytes());
+        }
+        out.write_all(&byte_str)
     }
 }
 
@@ -137,6 +137,23 @@ pub fn write_strings_to_npy<
     }
 }
 
+macro_rules! impl_writer_for_deref {
+    ($dtype:ty) => {
+        impl NumpyWriter for $dtype {
+            fn write_npy<W: std::io::Write>(self, out: &mut W) -> std::io::Result<()> {
+                self.deref().write_npy(out)
+            }
+        }
+    };
+}
+
+impl_writer_for_deref!(String);
+impl_writer_for_deref!(&String);
+impl_writer_for_deref!(Vec<String>);
+impl_writer_for_deref!(&Vec<String>);
+impl_writer_for_deref!(Vec<&str>);
+impl_writer_for_deref!(&Vec<&str>);
+
 fn encode_header(format: &str, shape: &[usize]) -> Vec<u8> {
     let mut header_data = format!(
         "{{'descr': '{}', 'fortran_order': False, 'shape': (",
@@ -175,5 +192,12 @@ mod tests {
         let mut buf = Vec::new();
         strs.write_npy(&mut buf).unwrap();
         assert_eq!(buf, include_bytes!("test_data/strings_test_out.npy"));
+    }
+
+    #[test]
+    fn test_encode_string() {
+        let x = "hello".to_owned();
+        x.write_npy(&mut std::fs::File::create("foo.npy").unwrap())
+            .unwrap();
     }
 }
