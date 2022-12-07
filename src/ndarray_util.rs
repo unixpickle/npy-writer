@@ -1,4 +1,4 @@
-use crate::base::{NumpyArray, NumpyArrayElement};
+use crate::base::{NumpyArray, NumpyArrayElement, OwnedIter};
 use ndarray::{Array, ArrayBase, Data, Dimension};
 
 impl<E: Data, D: Dimension> NumpyArray for ArrayBase<E, D>
@@ -29,21 +29,7 @@ where
     }
 
     fn npy_elements(self) -> Self::Iter {
-        OwnedIter {
-            contained: self.iter(),
-        }
-    }
-}
-
-pub struct OwnedIter<'a, T: 'a + Clone, I: 'a + Iterator<Item = &'a T>> {
-    contained: I,
-}
-
-impl<'a, T: 'a + Clone, I: 'a + Iterator<Item = &'a T>> Iterator for OwnedIter<'a, T, I> {
-    type Item = T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.contained.next().map(|x| x.clone())
+        OwnedIter(self.iter())
     }
 }
 

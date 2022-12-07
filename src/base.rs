@@ -65,6 +65,32 @@ impl<A: NumpyArrayElement> NumpyArray for Vec<A> {
     }
 }
 
+impl<'a, A: NumpyArrayElement + Clone> NumpyArray for &'a Vec<A> {
+    type Elem = A;
+    type Iter = OwnedIter<'a, A, <Self as IntoIterator>::IntoIter>;
+
+    fn npy_shape(&self) -> Vec<usize> {
+        vec![self.len()]
+    }
+
+    fn npy_elements(self) -> Self::Iter {
+        OwnedIter(self.into_iter())
+    }
+}
+
+impl<'a, A: NumpyArrayElement + Clone> NumpyArray for &'a [A] {
+    type Elem = A;
+    type Iter = OwnedIter<'a, A, <Self as IntoIterator>::IntoIter>;
+
+    fn npy_shape(&self) -> Vec<usize> {
+        vec![self.len()]
+    }
+
+    fn npy_elements(self) -> Self::Iter {
+        OwnedIter(self.into_iter())
+    }
+}
+
 pub trait NumpyWriter: Sized {
     fn write_npy<W: std::io::Write>(self, out: &mut W) -> std::io::Result<()>;
 }
@@ -180,6 +206,16 @@ fn encode_header(format: &str, shape: &[usize]) -> Vec<u8> {
     all_bytes.push(((header_bytes.len() >> 8) & 0xff) as u8);
     all_bytes.extend(header_bytes);
     all_bytes
+}
+
+pub struct OwnedIter<'a, T: 'a + Clone, I: 'a + Iterator<Item = &'a T>>(pub I);
+
+impl<'a, T: 'a + Clone, I: 'a + Iterator<Item = &'a T>> Iterator for OwnedIter<'a, T, I> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next().map(|x| x.clone())
+    }
 }
 
 #[cfg(test)]
